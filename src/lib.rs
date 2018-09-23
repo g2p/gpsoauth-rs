@@ -61,6 +61,7 @@ pub fn master_login_request(email: &str, password: &str, device_id: &str) -> Req
     println!("Body {}", body);
     Request::post(AUTH_URL)
         .header("User-Agent", "gpsoauth-rs/".to_owned() + VERSION)
+        .header("Content-Type", "application/x-www-form-urlencoded")
         .body(hyper::Body::from(body))
         .unwrap()
 }
