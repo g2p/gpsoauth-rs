@@ -1,0 +1,16 @@
+[package]
+name = "gpsoauth"
+version = "0.1.0"
+authors = ["Gabriel de Perthuis <g2p.code@gmail.com>"]
+
+[dependencies]
+base64 = "*"
+byteorder = "*"
+http = "*"
+hyper = "*"
+ring = "*"
+serde_urlencoded = "*"
+untrusted = "*"
+
+[replace]
+"ring:0.13.2" = { path = "../ring" }
