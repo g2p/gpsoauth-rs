@@ -66,6 +66,38 @@ pub fn master_login_request(email: &str, password: &str, device_id: &str) -> Req
         .unwrap()
 }
 
+pub fn oauth_request(
+    email: &str,
+    token: &str,
+    device_id: &str,
+    service: &str,
+    app: &str,
+    client_sig: &str,
+) -> Request<hyper::Body> {
+    let body = &[
+        ("accountType", "HOSTED_OR_GOOGLE"),
+        ("Email", email),
+        ("has_permission", "1"),
+        ("EncryptedPasswd", token),
+        ("service", service),
+        ("source", "android"),
+        ("androidId", device_id),
+        ("app", app),
+        ("client_sig", client_sig),
+        ("device_country", "us"),
+        ("operatorCountry", "us"),
+        ("lang", "en"),
+        ("sdk_version", "17"),
+    ];
+    let body = serde_urlencoded::to_string(body).unwrap();
+    println!("Body {}", body);
+    Request::post(AUTH_URL)
+        .header("User-Agent", "gpsoauth-rs/".to_owned() + VERSION)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(hyper::Body::from(body))
+        .unwrap()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

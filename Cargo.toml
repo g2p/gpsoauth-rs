@@ -8,9 +8,9 @@ base64 = "*"
 byteorder = "*"
 http = "*"
 hyper = "*"
-ring = "*"
+ring = { version = "*", features = [ "rsa_signing" ] }
 serde_urlencoded = "*"
 untrusted = "*"
 
 [replace]
-"ring:0.13.2" = { path = "../ring" }
+#"ring:0.13.2" = { path = "../ring" }
