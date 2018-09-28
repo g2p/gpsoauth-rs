@@ -6,6 +6,7 @@ extern crate byteorder;
 extern crate futures;
 extern crate http;
 extern crate hyper;
+extern crate objekt;
 extern crate ring;
 extern crate serde_urlencoded;
 extern crate untrusted;
@@ -38,7 +39,7 @@ impl AuthorizedRequestBuilder for http::request::Builder {
     }
 }
 
-pub trait Client<B = hyper::Body>: std::fmt::Debug + Sync + Send
+pub trait Client<B = hyper::Body>: std::fmt::Debug + Sync + Send + objekt::Clone
 where
     B: Payload + Send + 'static,
     B::Data: Send,
