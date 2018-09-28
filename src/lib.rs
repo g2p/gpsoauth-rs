@@ -25,21 +25,6 @@ const GOOGLE_DEFAULT_PUBLIC_KEY : &'static str =
 const AUTH_URL: &'static str = "https://android.clients.google.com/auth";
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-pub struct ServiceInfo<'a> {
-    service: &'a str,
-    app: &'a str,
-    client_sig: &'a str,
-}
-
-pub struct AuthContext<'a> {
-    username: &'a str,
-    password: &'a str,
-    device_id: &'a str,
-    service_info: ServiceInfo<'a>,
-    master_token: Option<String>,
-    oauth_token: Option<String>,
-}
-
 pub trait AuthorizedRequestBuilder {
     fn authorization_header(&mut self, oauth_token: &str) -> &mut Self;
 }
@@ -53,7 +38,7 @@ impl AuthorizedRequestBuilder for http::request::Builder {
     }
 }
 
-pub trait Client<B = hyper::Body>
+pub trait Client<B = hyper::Body>: std::fmt::Debug + Sync + Send
 where
     B: Payload + Send + 'static,
     B::Data: Send,
@@ -72,6 +57,24 @@ where
     fn request(&self, req: Request<B>) -> hyper::client::ResponseFuture {
         hyper::Client::request(self, req)
     }
+}
+
+#[derive(Debug)]
+pub struct ServiceInfo {
+    pub service: String,
+    pub app: String,
+    pub client_sig: String,
+}
+
+#[derive(Debug)]
+pub struct AuthContext {
+    pub client: Box<Client>,
+    pub username: String,
+    pub password: String,
+    pub device_id: String,
+    pub service_info: ServiceInfo,
+    pub master_token: Option<String>,
+    pub oauth_token: Option<String>,
 }
 
 pub fn pubkey_components(bytes: &[u8]) -> (&[u8], &[u8]) {
@@ -158,13 +161,10 @@ pub fn oauth_request(
 }
 
 pub fn master_auth_async(
-    client: &Client<hyper::Body>,
-    username: &str,
-    password: &str,
-    device_id: &str,
-) -> impl Future<Item = String, Error = ()> {
-    client
-        .request(master_login_request(username, password, device_id))
+    mut ctx: AuthContext
+) -> impl Future<Item = AuthContext, Error = ()> {
+    ctx.client
+        .request(master_login_request(&ctx.username, &ctx.password, &ctx.device_id))
         .and_then(move |res| {
             res.into_body().fold(None, |acc, chunk| {
                 ok::<_, hyper::Error>(chunk.lines().fold(acc, |acc, line| {
@@ -179,7 +179,8 @@ pub fn master_auth_async(
         }).map_err(|e| warn!("Login error {}", e))
         .then(|r| {
             if let Ok(Some(x)) = r {
-                ok(x)
+                ctx.master_token = Some(x);
+                ok(ctx)
             } else if let Err(y) = r {
                 err(y)
             } else {
@@ -189,22 +190,16 @@ pub fn master_auth_async(
 }
 
 pub fn oauth_async(
-    client: &Client<hyper::Body>,
-    username: &str,
-    master_token: &str,
-    device_id: &str,
-    service: &str,
-    app: &str,
-    client_sig: &str,
-) -> impl Future<Item = String, Error = ()> {
-    client
+    mut ctx: AuthContext
+) -> impl Future<Item = AuthContext, Error = ()> {
+    ctx.client
         .request(oauth_request(
-            username,
-            master_token,
-            device_id,
-            service,
-            app,
-            client_sig,
+            &ctx.username,
+            &ctx.master_token.clone().unwrap(),
+            &ctx.device_id,
+            &ctx.service_info.service,
+            &ctx.service_info.app,
+            &ctx.service_info.client_sig,
         )).and_then(move |res| {
             res.into_body().fold(None, |acc, chunk| {
                 ok::<_, hyper::Error>(chunk.lines().fold(acc, |acc, line| {
@@ -219,7 +214,8 @@ pub fn oauth_async(
         }).map_err(|e| warn!("Login error {}", e))
         .then(|r| {
             if let Ok(Some(x)) = r {
-                ok(x)
+                ctx.oauth_token = Some(x);
+                ok(ctx)
             } else if let Err(y) = r {
                 err(y)
             } else {
