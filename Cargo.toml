@@ -6,8 +6,10 @@ authors = ["Gabriel de Perthuis <g2p.code@gmail.com>"]
 [dependencies]
 base64 = "*"
 byteorder = "*"
+futures = "*"
 http = "*"
 hyper = "*"
+log = "*"
 ring = { version = "*", features = [ "rsa_signing" ] }
 serde_urlencoded = "*"
 untrusted = "*"
